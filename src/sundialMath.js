@@ -10,44 +10,49 @@ export function calculateHourLines(config) {
   const useSolarTime = !!config.useSolarTime;
   const phi = latitude * DEG_TO_RAD;
 
-  // 經度偏移：太陽正午與鐘錶正午的落差
+  // 經度偏移：鐘錶正午與太陽正午的落差角度
   const standardMeridian = timezone * 15;
   const lonOffsetDeg = useSolarTime ? 0 : (longitude - standardMeridian);
 
+  // 1. 算出「真太陽正午」發生在鐘錶上的哪一刻 (以小數表示，例如 6.902)
+  const meridianHourDec = 12 - (lonOffsetDeg / 15);
+
+  // 2. 以正午為中心，向左推 7 小時，向右推 7 小時
+  const startHour = Math.floor(meridianHourDec - 7); 
+  const endHour = Math.ceil(meridianHourDec + 7);
+
   const lines = [];
 
-  // 【核心修復】：完全捨棄時間過濾，改用純幾何的「角度區間」
-  // 從太陽正午前 7 小時 (-105度) 畫到太陽正午後 7 小時 (+105度)
-  // 這樣保證「物理畫面」永遠是左右對稱且飽滿的
-  for (let hRelDeg = -105; hRelDeg <= 105; hRelDeg += 3.75) { 
-    const hRelRad = hRelDeg * DEG_TO_RAD;
+  // 3. 【核心修復】：改回以 0.25 小時 (15分鐘) 為單位跳動，保證一定會踩到精確的整點！
+  // 絕對不加任何時間過濾器，讓幾何決定對稱。
+  for (let hour = startHour; hour <= endHour; hour += 0.25) { 
     
-    // 算出這條線代表的「原始鐘錶時間」
-    const rawHour = 12 + (hRelDeg / 15) - (lonOffsetDeg / 15);
-    
-    // 【跨日修復】：將時間標準化到 0.0 ~ 23.99 之間
-    let displayHour = rawHour % 24;
+    // 將跨日的時間轉換為 0.00 ~ 23.99 (例如 -1 點變成 23 點)
+    let displayHour = hour % 24;
     if (displayHour < 0) displayHour += 24;
 
-    // 處理浮點數精度 (確保 12.00001 被視為整點)
+    // 處理 JavaScript 浮點數精度，確保 12.0001 被認定為 12.0
     const hourMod = Number(Math.abs(displayHour % 1).toFixed(3));
     const isFullHour = hourMod === 0 || hourMod === 1;
 
+    const hDeg = (hour - 12) * 15 + lonOffsetDeg; 
+    const hRad = hDeg * DEG_TO_RAD;
+    
     let pointData = { 
-      hour: displayHour,
-      displayHourText: Math.round(displayHour), // 提供給 SVG 顯示的乾淨數字
+      hour: hour, // 原始時間供數學計算
+      displayHourText: Math.round(displayHour), // 顯示用的乾淨整數數字
       isFullHour: isFullHour,
       isHalfHour: hourMod === 0.5,
       isQuarterHour: hourMod === 0.25 || hourMod === 0.75
     };
 
     if (config.type === 'analemmatic') {
-      pointData.x = Math.sin(hRelRad);
-      pointData.y = Math.sin(phi) * Math.cos(hRelRad);
+      pointData.x = Math.sin(hRad);
+      pointData.y = Math.sin(phi) * Math.cos(hRad);
       pointData.thicknessShift = 0; 
     } else {
       const factor = config.type === 'horizontal' ? Math.sin(phi) : Math.cos(phi);
-      const angleRad = Math.atan2(Math.sin(hRelRad) * factor, Math.cos(hRelRad));
+      const angleRad = Math.atan2(Math.sin(hRad) * factor, Math.cos(hRad));
       pointData.x = Math.sin(angleRad);
       pointData.y = Math.cos(angleRad);
       
@@ -59,6 +64,7 @@ export function calculateHourLines(config) {
       pointData.thicknessShift = (gnomonThickness / 2) * Math.sign(pointData.x || 0);
     }
 
+    // 將所有計算好的線條推入陣列
     lines.push(pointData);
   }
   return lines;
