@@ -4,71 +4,65 @@ const RAD_TO_DEG = 180 / Math.PI;
 
 export function calculateHourLines(config) {
   const { latitude, longitude, timezone, type, gnomonThickness = 0, radius = 100 } = config;
-  const lines = [];
   const phi = latitude * DEG_TO_RAD;
 
-  // 1. 經度修正角度
+  // 1. 計算經度偏移導致的時角偏移（弧度）
   const standardMeridian = timezone * 15;
-  const longitudeOffsetDeg = longitude - standardMeridian;
+  const longitudeOffsetRad = (longitude - standardMeridian) * DEG_TO_RAD;
 
-  // 2. 先計算「時鐘正午 12:00」的原始角度或座標，作為校正基準 (Reference Base)
-  let baseOffset = 0;
-  let basePos = { x: 0, y: 0 };
-  const hNoon = longitudeOffsetDeg * DEG_TO_RAD;
-
-  if (type === 'horizontal' || type === 'vertical') {
-    const factor = type === 'horizontal' ? Math.sin(phi) : Math.cos(phi);
-    baseOffset = Math.atan(factor * Math.tan(hNoon)) * RAD_TO_DEG;
-  } else if (type === 'analemmatic') {
-    // 這裡我們記錄 12:00 在未旋轉前的位置
-    basePos.x = Math.sin(hNoon);
-    basePos.y = Math.sin(phi) * Math.cos(hNoon);
-    // 計算 12:00 點相對於中心點的角度，用於整體的旋轉
-    baseOffset = Math.atan2(basePos.x, basePos.y) * RAD_TO_DEG;
-  }
-
-  // 3. 計算 6:00 到 18:00 的數據
-  for (let hour = 6; hour <= 18; hour++) {
-    let hourAngleDeg = (hour - 12) * 15 + longitudeOffsetDeg;
-    const h = hourAngleDeg * DEG_TO_RAD;
-    let pointData = { hour, hourAngleDeg };
-
-    // 晷針厚度位移側 (12點前負，12點後正)
-    const side = hour < 12 ? -1 : (hour > 12 ? 1 : 0);
-
+  /**
+   * 內部函式：根據時角 h 計算該類型日晷的原始 X, Y 座標 (比例)
+   */
+  const getRawXY = (h) => {
     if (type === 'horizontal' || type === 'vertical') {
       const factor = type === 'horizontal' ? Math.sin(phi) : Math.cos(phi);
-      let H_rad = Math.atan(factor * Math.tan(h));
-      let H_deg = H_rad * RAD_TO_DEG;
-
-      // 象限修正
-      if (hourAngleDeg > 90) H_deg += 180;
-      if (hourAngleDeg < -90) H_deg -= 180;
-
-      // 【修正關鍵】：強制減去 12:00 的基準角，使其歸零
-      pointData.angle = H_deg - baseOffset;
-      pointData.thicknessShift = (gnomonThickness / 2) * side;
-
-    } else if (type === 'analemmatic') {
-      // 原始橢圓座標
-      const rawX = Math.sin(h);
-      const rawY = Math.sin(phi) * Math.cos(h);
-
-      // 【修正關鍵】：對橢圓座標進行二維旋轉矩陣運算，讓 12:00 轉到 Y 軸上
-      const rotRad = -baseOffset * DEG_TO_RAD;
-      pointData.x = rawX * Math.cos(rotRad) - rawY * Math.sin(rotRad);
-      pointData.y = rawX * Math.sin(rotRad) + rawY * Math.cos(rotRad);
-      pointData.thicknessShift = (gnomonThickness / 2) * side;
+      // 水平與垂直日晷在幾何上可以看作是單位圓上的射線
+      const angleRad = Math.atan2(Math.sin(h) * factor, Math.cos(h));
+      return { x: Math.sin(angleRad), y: Math.cos(angleRad) };
+    } else {
+      // Analemmatic: 橢圓座標
+      return { x: Math.sin(h), y: Math.sin(phi) * Math.cos(h) };
     }
+  };
+
+  // 2. 核心校正：計算「時鐘 12:00」的原始角度，作為「反向旋轉」的基準
+  // 12:00 的時角 h 就是 longitudeOffsetRad
+  const basePos = getRawXY(longitudeOffsetRad);
+  const rotationAngle = -Math.atan2(basePos.x, basePos.y); // 計算它偏離正北(Y軸)的角度
+
+  // 3. 生成 6:00 到 18:00 的數據
+  const lines = [];
+  for (let hour = 6; hour <= 18; hour++) {
+    const h = (hour - 12) * 15 * DEG_TO_RAD + longitudeOffsetRad;
+    const raw = getRawXY(h);
+
+    // 套用旋轉矩陣，將座標轉回 12:00 對齊 Y 軸的座標系
+    // x' = x cosθ - y sinθ
+    // y' = x sinθ + y cosθ
+    const cosR = Math.cos(rotationAngle);
+    const sinR = Math.sin(rotationAngle);
+    
+    let rotatedX = raw.x * cosR - raw.y * sinR;
+    let rotatedY = raw.x * sinR + raw.y * cosR;
+
+    // 處理晷針厚度位移 (side: 上午為負，下午為正)
+    const side = hour < 12 ? -1 : (hour > 12 ? 1 : 0);
+    const thicknessShift = (gnomonThickness / 2) * side;
+
+    const pointData = {
+      hour,
+      x: rotatedX,
+      y: rotatedY,
+      angle: Math.atan2(rotatedX, rotatedY) * RAD_TO_DEG,
+      thicknessShift
+    };
 
     lines.push(pointData);
-    
-    // 處理 12 點的雙線（若有厚度）
+
+    // 12:00 的厚度分開兩條線處理
     if (hour === 12 && gnomonThickness > 0) {
       lines[lines.length - 1].thicknessShift = -(gnomonThickness / 2);
-      // 複製一份給另一側
-      const right12 = JSON.parse(JSON.stringify(lines[lines.length - 1]));
-      right12.thicknessShift = (gnomonThickness / 2);
+      const right12 = { ...pointData, thicknessShift: (gnomonThickness / 2) };
       lines.push(right12);
     }
   }
