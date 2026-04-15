@@ -7,27 +7,39 @@ export default function SundialConfigPanel({ config, onChange }) {
     onChange({ ...config, [name]: type === 'number' ? Number(value) : value });
   };
 
+  const isAnalemmatic = config.type === 'analemmatic';
   const sectionStyle = { marginBottom: '24px' };
-  const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' };
-  const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', outline: 'none', boxSizing: 'border-box' };
+  const labelStyle = { display: 'block', fontSize: '11px', fontBold: '900', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' };
+  const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', outline: 'none', transition: 'all 0.2s' };
 
   return (
-    <div style={{ padding: '32px', height: '100%', overflowY: 'auto', backgroundColor: '#f8fafc' }}>
-      <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b', marginBottom: '4px' }}>SundialMagic</h2>
-      <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '32px' }}>專業日晷設計工具 v1.4</p>
+    <div style={{ padding: '32px', height: '100%', overflowY: 'auto', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0' }}>
+      <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', marginBottom: '4px', letterSpacing: '-1px' }}>SundialMagic</h2>
+      <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '32px', fontWeight: 'bold' }}>VERSION 1.5 PRO</p>
 
+      {/* 地理設定 */}
       <div style={sectionStyle}>
-        <h3 style={{ fontSize: '14px', color: '#334155', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px', marginBottom: '16px' }}>📍 地理與時間</h3>
+        <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#334155', borderLeft: '4px solid #3b82f6', paddingLeft: '10px', marginBottom: '16px' }}>📍 地理與時間</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-          <div><label style={labelStyle}>緯度</label><input type="number" name="latitude" value={config.latitude} onChange={handleChange} step="0.01" style={inputStyle} /></div>
-          <div><label style={labelStyle}>經度</label><input type="number" name="longitude" value={config.longitude} onChange={handleChange} step="0.01" style={inputStyle} /></div>
+          <div><label style={labelStyle}>緯度</label><input type="number" name="latitude" value={config.latitude} onChange={handleChange} style={inputStyle} /></div>
+          <div><label style={labelStyle}>經度</label><input type="number" name="longitude" value={config.longitude} onChange={handleChange} style={inputStyle} /></div>
         </div>
         <div><label style={labelStyle}>時區 (UTC)</label><input type="number" name="timezone" value={config.timezone} onChange={handleChange} style={inputStyle} /></div>
       </div>
 
+      {/* 晷面參數 */}
       <div style={sectionStyle}>
-        <h3 style={{ fontSize: '14px', color: '#334155', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px', marginBottom: '16px' }}>📐 晷面參數</h3>
-        <div style={{ marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#334155', borderLeft: '4px solid #3b82f6', paddingLeft: '10px', marginBottom: '16px' }}>📐 晷面參數</h3>
+        
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>時間模式</label>
+          <div style={{ display: 'flex', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '10px' }}>
+            <button onClick={() => onChange({...config, useSolarTime: false})} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', backgroundColor: !config.useSolarTime ? 'white' : 'transparent', color: !config.useSolarTime ? '#2563eb' : '#64748b', boxShadow: !config.useSolarTime ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>鐘錶時間</button>
+            <button onClick={() => onChange({...config, useSolarTime: true})} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', backgroundColor: config.useSolarTime ? 'white' : 'transparent', color: config.useSolarTime ? '#2563eb' : '#64748b', boxShadow: config.useSolarTime ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>真太陽時</button>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
           <label style={labelStyle}>日晷類型</label>
           <select name="type" value={config.type} onChange={handleChange} style={inputStyle}>
             <option value="horizontal">水平式 (Horizontal)</option>
@@ -35,35 +47,18 @@ export default function SundialConfigPanel({ config, onChange }) {
             <option value="analemmatic">地平投影式 (Analemmatic)</option>
           </select>
         </div>
-        
-        {/* 【UX 優化】：牆面方位角視覺化引導 */}
+
         {config.type === 'vertical' && (
-          <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-            <label style={{...labelStyle, color: '#0f172a'}}>牆面朝向方位 (Wall Azimuth)</label>
-            <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '12px', lineHeight: '1.6' }}>
-              請想像您<b>背貼著牆面</b>，看向正前方：<br/>
-              如果面向<b>正南方</b>，請設為 0°。<br/>
-              如果牆面偏向<b>西方</b> (右轉)，請向右拉 (正值)。<br/>
-              如果牆面偏向<b>東方</b> (左轉)，請向左拉 (負值)。
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input type="range" min="-90" max="90" name="wallAzimuth" value={config.wallAzimuth || 0} onChange={handleChange} style={{ flex: 1, accentColor: '#3b82f6' }} />
-              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: '6px', padding: '4px 8px' }}>
-                <input type="number" name="wallAzimuth" value={config.wallAzimuth || 0} onChange={handleChange} style={{ width: '40px', background: 'transparent', border: 'none', outline: 'none', textAlign: 'center', fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }} />
-                <span style={{ fontSize: '14px', color: '#64748b' }}>°</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', marginTop: '8px' }}>
-              <span>← 面向東 (-90°)</span>
-              <span>正南 (0°)</span>
-              <span>面向西 (+90°) →</span>
-            </div>
+          <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+            <label style={{...labelStyle, color: '#1d4ed8'}}>牆面方位角</label>
+            <input type="range" min="-90" max="90" name="wallAzimuth" value={config.wallAzimuth || 0} onChange={handleChange} style={{ width: '100%', accentColor: '#3b82f6' }} />
+            <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: '#1e40af', marginTop: '4px' }}>{config.wallAzimuth || 0}°</div>
           </div>
         )}
 
-        <div>
-          <label style={labelStyle}>晷針厚度 (mm)</label>
-          <input type="number" name="gnomonThickness" value={config.gnomonThickness} onChange={handleChange} min="0" style={inputStyle} />
+        <div style={{ opacity: isAnalemmatic ? 0.4 : 1, pointerEvents: isAnalemmatic ? 'none' : 'auto', transition: '0.3s' }}>
+          <label style={labelStyle}>晷針厚度 (mm) {isAnalemmatic && "— N/A"}</label>
+          <input type="number" name="gnomonThickness" value={isAnalemmatic ? 0 : config.gnomonThickness} onChange={handleChange} style={{...inputStyle, backgroundColor: isAnalemmatic ? '#f1f5f9' : 'white'}} />
         </div>
       </div>
     </div>
