@@ -14,7 +14,7 @@ export default function SundialConfigPanel({ config, onChange }) {
   return (
     <div style={{ padding: '32px', height: '100%', overflowY: 'auto', backgroundColor: '#f8fafc' }}>
       <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b', marginBottom: '4px' }}>SundialMagic</h2>
-      <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '32px' }}>專業日晷設計工具 v1.3</p>
+      <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '32px' }}>專業日晷設計工具 v1.4</p>
 
       <div style={sectionStyle}>
         <h3 style={{ fontSize: '14px', color: '#334155', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px', marginBottom: '16px' }}>📍 地理與時間</h3>
@@ -36,12 +36,28 @@ export default function SundialConfigPanel({ config, onChange }) {
           </select>
         </div>
         
-        {/* 當選擇垂直式時，顯示方位角輸入框 */}
+        {/* 【UX 優化】：牆面方位角視覺化引導 */}
         {config.type === 'vertical' && (
-          <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-            <label style={{...labelStyle, color: '#1d4ed8'}}>牆面方位角 (向西為正, 向東為負)</label>
-            <input type="number" name="wallAzimuth" value={config.wallAzimuth || 0} onChange={handleChange} style={inputStyle} placeholder="正南向為 0" />
-            <span style={{ fontSize: '10px', color: '#3b82f6', marginTop: '4px', display: 'block' }}>* 偏斜數學運算即將於下一階段導入</span>
+          <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <label style={{...labelStyle, color: '#0f172a'}}>牆面朝向方位 (Wall Azimuth)</label>
+            <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '12px', lineHeight: '1.6' }}>
+              請想像您<b>背貼著牆面</b>，看向正前方：<br/>
+              如果面向<b>正南方</b>，請設為 0°。<br/>
+              如果牆面偏向<b>西方</b> (右轉)，請向右拉 (正值)。<br/>
+              如果牆面偏向<b>東方</b> (左轉)，請向左拉 (負值)。
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <input type="range" min="-90" max="90" name="wallAzimuth" value={config.wallAzimuth || 0} onChange={handleChange} style={{ flex: 1, accentColor: '#3b82f6' }} />
+              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: '6px', padding: '4px 8px' }}>
+                <input type="number" name="wallAzimuth" value={config.wallAzimuth || 0} onChange={handleChange} style={{ width: '40px', background: 'transparent', border: 'none', outline: 'none', textAlign: 'center', fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }} />
+                <span style={{ fontSize: '14px', color: '#64748b' }}>°</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', marginTop: '8px' }}>
+              <span>← 面向東 (-90°)</span>
+              <span>正南 (0°)</span>
+              <span>面向西 (+90°) →</span>
+            </div>
           </div>
         )}
 
