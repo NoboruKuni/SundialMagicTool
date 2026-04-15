@@ -88,8 +88,15 @@ export default function SundialPreview({ config }) {
               )}
               
               {line.isFullHour && (
-                <text x={line.x * (radius + 20)} y={-line.y * (radius + 20)} textAnchor="middle" alignmentBaseline="middle" style={{ fontSize: '14px', fontWeight: '800', fill: '#475569', userSelect: 'none', fontFamily: 'system-ui' }}>
-                  {Math.round(line.hour)}
+                <text 
+                  x={line.x * (radius + 20)} 
+                  y={-line.y * (radius + 20)} 
+                  textAnchor="middle" 
+                  alignmentBaseline="middle" 
+                  style={{ fontSize: '14px', fontWeight: '800', fill: '#475569', userSelect: 'none', fontFamily: 'system-ui' }}
+                >
+                  {/* 【修正】：使用數學引擎算好的乾淨整數 */}
+                  {line.displayHourText}
                 </text>
               )}
             </g>

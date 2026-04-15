@@ -9,13 +9,13 @@ export default function SundialConfigPanel({ config, onChange }) {
 
   const isAnalemmatic = config.type === 'analemmatic';
   const sectionStyle = { marginBottom: '24px' };
-  const labelStyle = { display: 'block', fontSize: '11px', fontBold: '900', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' };
+  const labelStyle = { display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' };
   const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', outline: 'none', transition: 'all 0.2s' };
 
   return (
     <div style={{ padding: '32px', height: '100%', overflowY: 'auto', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0' }}>
       <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', marginBottom: '4px', letterSpacing: '-1px' }}>SundialMagic</h2>
-      <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '32px', fontWeight: 'bold' }}>VERSION 1.5 PRO</p>
+      <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '32px', fontWeight: 'bold' }}>VERSION 1.6 PRO</p>
 
       {/* 地理設定 */}
       <div style={sectionStyle}>
@@ -24,7 +24,23 @@ export default function SundialConfigPanel({ config, onChange }) {
           <div><label style={labelStyle}>緯度</label><input type="number" name="latitude" value={config.latitude} onChange={handleChange} style={inputStyle} /></div>
           <div><label style={labelStyle}>經度</label><input type="number" name="longitude" value={config.longitude} onChange={handleChange} style={inputStyle} /></div>
         </div>
-        <div><label style={labelStyle}>時區 (UTC)</label><input type="number" name="timezone" value={config.timezone} onChange={handleChange} style={inputStyle} /></div>
+        
+        {/* 【UI 優化】：鎖死範圍的時區下拉選單，並連動太陽時狀態 */}
+        <div style={{ opacity: config.useSolarTime ? 0.5 : 1, transition: '0.3s' }}>
+          <label style={labelStyle}>時區 (UTC) {config.useSolarTime && "— 太陽時無須設定"}</label>
+          <select 
+            name="timezone" 
+            value={config.timezone} 
+            onChange={handleChange} 
+            disabled={config.useSolarTime}
+            style={{...inputStyle, backgroundColor: config.useSolarTime ? '#f1f5f9' : 'white', cursor: config.useSolarTime ? 'not-allowed' : 'pointer'}}
+          >
+            {[...Array(25)].map((_, i) => {
+              const val = i - 12;
+              return <option key={val} value={val}>UTC {val > 0 ? '+' + val : val}</option>;
+            })}
+          </select>
+        </div>
       </div>
 
       {/* 晷面參數 */}
@@ -57,7 +73,7 @@ export default function SundialConfigPanel({ config, onChange }) {
         )}
 
         <div style={{ opacity: isAnalemmatic ? 0.4 : 1, pointerEvents: isAnalemmatic ? 'none' : 'auto', transition: '0.3s' }}>
-          <label style={labelStyle}>晷針厚度 (mm) {isAnalemmatic && "— N/A"}</label>
+          <label style={labelStyle}>晷針厚度 (mm) {isAnalemmatic && "— 投影式不適用"}</label>
           <input type="number" name="gnomonThickness" value={isAnalemmatic ? 0 : config.gnomonThickness} onChange={handleChange} style={{...inputStyle, backgroundColor: isAnalemmatic ? '#f1f5f9' : 'white'}} />
         </div>
       </div>
