@@ -6,52 +6,51 @@ export function calculateHourLines(config) {
   const { latitude, longitude, timezone, type, gnomonThickness = 0 } = config;
   const phi = latitude * DEG_TO_RAD;
 
-  // 1. 經度偏差 (以角度計)
+  // 1. 計算經度偏移 (小時 12:00 時，太陽實際上偏離子午線幾度)
   const standardMeridian = timezone * 15;
-  const longitudeOffsetDeg = longitude - standardMeridian;
+  const lonOffsetDeg = longitude - standardMeridian;
 
-  // 2. 計算「時鐘 12:00」的原始投影偏移角
-  // 對於水平/垂直式，我們算出 12 點時太陽實際的角度位移
-  const hNoonRad = longitudeOffsetDeg * DEG_TO_RAD;
-  const factor = type === 'horizontal' ? Math.sin(phi) : Math.cos(phi);
-  // 這是 12:00 在原始座標系中的偏角
-  const baseAngleRad = Math.atan(factor * Math.tan(hNoonRad));
-  const baseAngleDeg = baseAngleRad * RAD_TO_DEG;
+  // 2. 核心公式：根據日晷類型，計算「時角 h」對應的「面角度 A」
+  const getDialAngle = (hDeg) => {
+    const hRad = hDeg * DEG_TO_RAD;
+    if (type === 'analemmatic') {
+      // 地平投影式：回傳 X, Y 座標
+      return { x: Math.sin(hRad), y: Math.sin(phi) * Math.cos(hRad) };
+    } else {
+      // 水平/垂直式
+      const factor = type === 'horizontal' ? Math.sin(phi) : Math.cos(phi);
+      // 使用 atan2 確保 360 度全範圍精確
+      const angleRad = Math.atan2(Math.sin(hRad) * factor, Math.cos(hRad));
+      return { angleDeg: angleRad * RAD_TO_DEG };
+    }
+  };
+
+  // 3. 找出「時鐘 12:00」的基準 (Base)
+  const base = getDialAngle(lonOffsetDeg);
 
   const lines = [];
   for (let hour = 6; hour <= 18; hour++) {
-    // 太陽時角 (包含經度修正)
-    const hourAngleDeg = (hour - 12) * 15 + longitudeOffsetDeg;
-    const h = hourAngleDeg * DEG_TO_RAD;
+    const currentH = (hour - 12) * 15 + lonOffsetDeg;
+    const current = getDialAngle(currentH);
     
     let pointData = { hour };
     const side = hour < 12 ? -1 : (hour > 12 ? 1 : 0);
     const thicknessShift = (gnomonThickness / 2) * side;
 
-    if (type === 'horizontal' || type === 'vertical') {
-      // 計算該小時的投影角
-      let H_rad = Math.atan(factor * Math.tan(h));
-      let H_deg = H_rad * RAD_TO_DEG;
-
-      // 象限修正 (處理清晨與傍晚)
-      if (hourAngleDeg > 90) H_deg += 180;
-      if (hourAngleDeg < -90) H_deg -= 180;
-
-      // 【關鍵修正】：直接減去 12 點的偏角，讓 12 點歸零
-      pointData.angle = H_deg - baseAngleDeg;
-      
-      // 轉換成 X, Y 座標供畫圖使用
-      const finalRad = pointData.angle * DEG_TO_RAD;
-      pointData.x = Math.sin(finalRad);
-      pointData.y = Math.cos(finalRad);
-
-    } else if (type === 'analemmatic') {
-      // 對於地平投影式，我們讓「時角」歸零即可
-      // 這樣 12 點的時角會變成 0，對應 sin(0)=0，剛好在 Y 軸上
-      const adjustedH = (hour - 12) * 15 * DEG_TO_RAD;
-      pointData.x = Math.sin(adjustedH);
-      pointData.y = Math.sin(phi) * Math.cos(adjustedH);
-      pointData.angle = Math.atan2(pointData.x, pointData.y) * RAD_TO_DEG;
+    if (type === 'analemmatic') {
+      // 對於橢圓日晷，我們需要旋轉座標向量
+      const rotRad = -Math.atan2(base.x, base.y);
+      const cosR = Math.cos(rotRad);
+      const sinR = Math.sin(rotRad);
+      // 旋轉矩陣確保 12:00 的 (base.x, base.y) 被轉到 (0, 1)
+      pointData.x = current.x * cosR - current.y * sinR;
+      pointData.y = current.x * sinR + current.y * cosR;
+    } else {
+      // 水平/垂直式：直接減去基準角，確保 12:00 為 0 度
+      const finalAngle = current.angleDeg - base.angleDeg;
+      pointData.x = Math.sin(finalAngle * DEG_TO_RAD);
+      pointData.y = Math.cos(finalAngle * DEG_TO_RAD);
+      pointData.angle = finalAngle;
     }
 
     pointData.thicknessShift = thicknessShift;
@@ -62,6 +61,5 @@ export function calculateHourLines(config) {
       lines.push({ ...pointData, thicknessShift: (gnomonThickness / 2) });
     }
   }
-
   return lines;
 }
