@@ -3,8 +3,16 @@ import React from 'react';
 
 export default function SundialConfigPanel({ config, onChange }) {
   const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    onChange({ ...config, [name]: type === 'number' ? Number(value) : value });
+    let { name, value, type } = e.target;
+    
+    if (type === 'number') {
+      value = Number(value);
+      // 【防呆鎖定】：限制經緯度範圍
+      if (name === 'latitude') value = Math.max(0, Math.min(90, value));
+      if (name === 'longitude') value = Math.max(0, Math.min(360, value));
+    }
+    
+    onChange({ ...config, [name]: value });
   };
 
   const isAnalemmatic = config.type === 'analemmatic';
@@ -15,17 +23,22 @@ export default function SundialConfigPanel({ config, onChange }) {
   return (
     <div style={{ padding: '32px', height: '100%', overflowY: 'auto', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0' }}>
       <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', marginBottom: '4px', letterSpacing: '-1px' }}>SundialMagic</h2>
-      <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '32px', fontWeight: 'bold' }}>VERSION 1.6 PRO</p>
+      <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '32px', fontWeight: 'bold' }}>VERSION 1.7 PRO</p>
 
       {/* 地理設定 */}
       <div style={sectionStyle}>
         <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#334155', borderLeft: '4px solid #3b82f6', paddingLeft: '10px', marginBottom: '16px' }}>📍 地理與時間</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-          <div><label style={labelStyle}>緯度</label><input type="number" name="latitude" value={config.latitude} onChange={handleChange} style={inputStyle} /></div>
-          <div><label style={labelStyle}>經度</label><input type="number" name="longitude" value={config.longitude} onChange={handleChange} style={inputStyle} /></div>
+          <div>
+            <label style={labelStyle}>緯度 (0~90)</label>
+            <input type="number" name="latitude" value={config.latitude} onChange={handleChange} min="0" max="90" step="0.01" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>經度 (0~360)</label>
+            <input type="number" name="longitude" value={config.longitude} onChange={handleChange} min="0" max="360" step="0.01" style={inputStyle} />
+          </div>
         </div>
         
-        {/* 【UI 優化】：鎖死範圍的時區下拉選單，並連動太陽時狀態 */}
         <div style={{ opacity: config.useSolarTime ? 0.5 : 1, transition: '0.3s' }}>
           <label style={labelStyle}>時區 (UTC) {config.useSolarTime && "— 太陽時無須設定"}</label>
           <select 
@@ -74,7 +87,7 @@ export default function SundialConfigPanel({ config, onChange }) {
 
         <div style={{ opacity: isAnalemmatic ? 0.4 : 1, pointerEvents: isAnalemmatic ? 'none' : 'auto', transition: '0.3s' }}>
           <label style={labelStyle}>晷針厚度 (mm) {isAnalemmatic && "— 投影式不適用"}</label>
-          <input type="number" name="gnomonThickness" value={isAnalemmatic ? 0 : config.gnomonThickness} onChange={handleChange} style={{...inputStyle, backgroundColor: isAnalemmatic ? '#f1f5f9' : 'white'}} />
+          <input type="number" name="gnomonThickness" value={isAnalemmatic ? 0 : config.gnomonThickness} onChange={handleChange} min="0" style={{...inputStyle, backgroundColor: isAnalemmatic ? '#f1f5f9' : 'white'}} />
         </div>
       </div>
     </div>

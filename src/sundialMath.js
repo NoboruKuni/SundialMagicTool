@@ -10,6 +10,7 @@ export function calculateHourLines(config) {
   const useSolarTime = !!config.useSolarTime;
   const phi = latitude * DEG_TO_RAD;
 
+  // 經度偏移
   const standardMeridian = timezone * 15;
   const lonOffsetDeg = useSolarTime ? 0 : (longitude - standardMeridian);
 
@@ -20,6 +21,7 @@ export function calculateHourLines(config) {
   const lines = [];
 
   for (let hour = startHour; hour <= endHour; hour += 0.25) { 
+    
     let displayHour = hour % 24;
     if (displayHour < 0) displayHour += 24;
 
@@ -31,7 +33,7 @@ export function calculateHourLines(config) {
     
     let pointData = { 
       hour: hour, 
-      displayHourText: Math.round(displayHour),
+      displayHourText: Math.round(displayHour), 
       isFullHour: isFullHour,
       isHalfHour: hourMod === 0.5,
       isQuarterHour: hourMod === 0.25 || hourMod === 0.75
@@ -53,17 +55,16 @@ export function calculateHourLines(config) {
         pointData.y = -pointData.y;
       }
 
-      // 【核心修復】：判斷是否為正中央的軸線 (X 接近 0)
+      // 【核心修復】：判斷是否為正中央的軸線 (X 非常接近 0)
       const isMeridian = Math.abs(pointData.x) < 0.0001;
 
       if (isMeridian && gnomonThickness > 0) {
-        // 如果是中央線且有粗晷針，裂開成左右兩條線！
-        // 為了避免 SVG 文字重疊，我們讓右側的那條線隱藏文字
+        // 裂變成兩條線，且完全保留原本的屬性 (包含 isFullHour，讓數字雙邊顯示)
         lines.push({ ...pointData, thicknessShift: -(gnomonThickness / 2) });
-        lines.push({ ...pointData, thicknessShift: (gnomonThickness / 2), isFullHour: false }); 
+        lines.push({ ...pointData, thicknessShift: (gnomonThickness / 2) });
       } else {
-        // 否則正常根據 X 的正負號往外推
-        pointData.thicknessShift = (gnomonThickness / 2) * Math.sign(pointData.x);
+        // 正常根據 X 的正負號往外推
+        pointData.thicknessShift = (gnomonThickness / 2) * Math.sign(pointData.x || 0);
         lines.push(pointData);
       }
     }
