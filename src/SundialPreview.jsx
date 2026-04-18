@@ -1,21 +1,28 @@
 // 檔案名稱：src/SundialPreview.jsx
 import React, { useMemo, useRef } from 'react';
 
-// 注意：現在接收 data props
 export default function SundialPreview({ config, data }) {
-  const { lines: hourLines, gnomon } = data;
-  
+  // 【防崩潰裝甲】：安全解構資料，相容舊版陣列與防止 undefined 崩潰
+  const hourLines = data?.lines || (Array.isArray(data) ? data : []);
+  const gnomon = data?.gnomon || {};
+
   const { meridianTimeStr, substyleAngleDeg } = useMemo(() => {
     const lonOffsetDeg = config.useSolarTime ? 0 : (config.longitude - config.timezone * 15);
     const meridianHourDec = 12 - (lonOffsetDeg / 15);
     let mHrs = Math.floor(meridianHourDec), mMins = Math.round((meridianHourDec - mHrs) * 60);
     if (mMins === 60) { mHrs += 1; mMins = 0; }
     if (mHrs >= 24) mHrs -= 24; if (mHrs < 0) mHrs += 24;
-    return { meridianTimeStr: `${mHrs}:${mMins.toString().padStart(2, '0')}`, substyleAngleDeg: gnomon.SD_deg || 0 };
+
+    // 安全讀取 SD_deg，如果讀不到就給 0
+    return { 
+      meridianTimeStr: `${mHrs}:${mMins.toString().padStart(2, '0')}`, 
+      substyleAngleDeg: gnomon.SD_deg || 0 
+    };
   }, [config, gnomon]);
 
   const svgRef = useRef(null);
   const radius = config.radius || 150, padding = 120, viewBoxSize = radius + padding;
+
   const isVertical = config.type === 'vertical';
   const axisYDir = isVertical ? 1 : -1; 
 
@@ -29,12 +36,21 @@ export default function SundialPreview({ config, data }) {
     link.click();
   };
 
+  // 如果 hourLines 是空的，顯示安全警告而不是白屏
+  if (hourLines.length === 0) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#ef4444', fontWeight: 'bold' }}>
+        ⚠️ 正在計算數學模型，請稍候或重新整理頁面 (Ctrl + F5)。
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'white' }}>
       
-      {/* 【修正】：將下載按鈕移出容易被遮蔽的區域，設定超高 zIndex */}
+      {/* 浮動的 SVG 下載按鈕 */}
       <div style={{ position: 'absolute', bottom: '30px', right: '30px', zIndex: 999 }}>
-        <button onClick={downloadSVG} style={{ padding: '12px 24px', backgroundColor: '#0f172a', color: 'white', borderRadius: '50px', fontSize: '13px', fontWeight: 'bold', border: 'none', cursor: 'pointer', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', transition: 'transform 0.1s' }}>
+        <button onClick={downloadSVG} style={{ padding: '12px 24px', backgroundColor: '#0f172a', color: 'white', borderRadius: '50px', fontSize: '13px', fontWeight: 'bold', border: 'none', cursor: 'pointer', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
           📥 下載 SVG 向量圖
         </button>
       </div>
@@ -56,6 +72,7 @@ export default function SundialPreview({ config, data }) {
             )
           )}
         </g>
+        
         <circle cx="0" cy="0" r="4" fill="#ef4444" />
 
         {hourLines.map((line, idx) => {
@@ -84,6 +101,9 @@ export default function SundialPreview({ config, data }) {
           );
         })}
       </svg>
+      <div style={{ position: 'absolute', bottom: '20px', left: '20px', fontSize: '11px', color: '#94a3b8' }}>
+        {isVertical && `副晷針偏角 (SD): ${substyleAngleDeg.toFixed(2)}°`}
+      </div>
     </div>
   );
 }
