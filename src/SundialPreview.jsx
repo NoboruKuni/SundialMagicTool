@@ -1,43 +1,52 @@
 // 檔案名稱：src/SundialPreview.jsx
 import React, { useMemo, useRef } from 'react';
-import { calculateHourLines } from './sundialMath';
 
-export default function SundialPreview({ config }) {
-  const { hourLines, meridianTimeStr, substyleAngleDeg } = useMemo(() => {
-    const lines = calculateHourLines(config);
+// 注意：現在接收 data props
+export default function SundialPreview({ config, data }) {
+  const { lines: hourLines, gnomon } = data;
+  
+  const { meridianTimeStr, substyleAngleDeg } = useMemo(() => {
     const lonOffsetDeg = config.useSolarTime ? 0 : (config.longitude - config.timezone * 15);
     const meridianHourDec = 12 - (lonOffsetDeg / 15);
     let mHrs = Math.floor(meridianHourDec), mMins = Math.round((meridianHourDec - mHrs) * 60);
     if (mMins === 60) { mHrs += 1; mMins = 0; }
     if (mHrs >= 24) mHrs -= 24; if (mHrs < 0) mHrs += 24;
-
-    let sdDeg = 0;
-    if (config.type === 'vertical') {
-      const D = (config.wallAzimuth || 0) * (Math.PI / 180);
-      sdDeg = Math.atan2(Math.sin(D), Math.tan(config.latitude * (Math.PI / 180))) * (180 / Math.PI);
-    }
-    return { hourLines: lines, meridianTimeStr: `${mHrs}:${mMins.toString().padStart(2, '0')}`, substyleAngleDeg: sdDeg };
-  }, [config]);
+    return { meridianTimeStr: `${mHrs}:${mMins.toString().padStart(2, '0')}`, substyleAngleDeg: gnomon.SD_deg || 0 };
+  }, [config, gnomon]);
 
   const svgRef = useRef(null);
   const radius = config.radius || 150, padding = 120, viewBoxSize = radius + padding;
-
   const isVertical = config.type === 'vertical';
   const axisYDir = isVertical ? 1 : -1; 
 
+  const downloadSVG = () => {
+    if (!svgRef.current) return;
+    const svgData = svgRef.current.outerHTML;
+    const blob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `sundial-magic-${config.type}.svg`;
+    link.click();
+  };
+
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', backgroundColor: 'white' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'white' }}>
       
-      <div style={{ position: 'absolute', top: '30px', right: '30px', textAlign: 'center' }}>
+      {/* 【修正】：將下載按鈕移出容易被遮蔽的區域，設定超高 zIndex */}
+      <div style={{ position: 'absolute', bottom: '30px', right: '30px', zIndex: 999 }}>
+        <button onClick={downloadSVG} style={{ padding: '12px 24px', backgroundColor: '#0f172a', color: 'white', borderRadius: '50px', fontSize: '13px', fontWeight: 'bold', border: 'none', cursor: 'pointer', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', transition: 'transform 0.1s' }}>
+          📥 下載 SVG 向量圖
+        </button>
+      </div>
+
+      <div style={{ position: 'absolute', top: '30px', right: '30px', textAlign: 'center', zIndex: 10 }}>
         <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
             <div style={{ width: '2px', height: '20px', backgroundColor: isVertical ? '#3b82f6' : '#ef4444', transform: isVertical ? 'rotate(180deg)' : 'none' }}></div>
         </div>
         <div style={{ fontSize: '9px', color: '#64748b', marginTop: '4px', fontWeight: 'bold' }}>{isVertical ? '垂直鉛垂線' : '正北'}</div>
       </div>
 
-      <svg ref={svgRef} viewBox={`-${viewBoxSize} -${viewBoxSize} ${viewBoxSize * 2} ${viewBoxSize * 2}`} style={{ width: '100%', maxWidth: '700px', height: 'auto' }}>
-        
-        {/* 【修正】：移除了錯誤的負號，讓 SVG 的旋轉方向與我們推演的物理方向一致 */}
+      <svg ref={svgRef} viewBox={`-${viewBoxSize} -${viewBoxSize} ${viewBoxSize * 2} ${viewBoxSize * 2}`} style={{ width: '100%', height: '100%', maxHeight: '800px' }}>
         <g transform={`rotate(${substyleAngleDeg})`}>
           {config.type !== 'analemmatic' && (
             config.gnomonThickness > 0 ? (
@@ -47,7 +56,6 @@ export default function SundialPreview({ config }) {
             )
           )}
         </g>
-        
         <circle cx="0" cy="0" r="4" fill="#ef4444" />
 
         {hourLines.map((line, idx) => {
@@ -56,7 +64,6 @@ export default function SundialPreview({ config }) {
           const pxOuter = line.x * radius, pyOuter = -line.y * radius;
           const pxInner = line.x * rInner, pyInner = -line.y * rInner;
 
-          // 【物理位移法】：計算垂直於傾斜晷針的法向量，產生完美的平行推移
           const sdRad = substyleAngleDeg * (Math.PI / 180);
           const dx = shift * Math.cos(sdRad);
           const dy = shift * Math.sin(sdRad);
@@ -66,20 +73,10 @@ export default function SundialPreview({ config }) {
               {config.type === 'analemmatic' ? (
                 <circle cx={pxOuter} cy={pyOuter} r={line.isFullHour ? 4.5 : 1.5} fill="#2563eb" />
               ) : (
-                <line 
-                  x1={pxInner + dx} y1={pyInner + dy} 
-                  x2={pxOuter + dx} y2={pyOuter + dy} 
-                  stroke={line.isFullHour ? "#1e293b" : "#cbd5e1"} 
-                  strokeWidth={line.isFullHour ? 2 : 0.8} 
-                />
+                <line x1={pxInner + dx} y1={pyInner + dy} x2={pxOuter + dx} y2={pyOuter + dy} stroke={line.isFullHour ? "#1e293b" : "#cbd5e1"} strokeWidth={line.isFullHour ? 2 : 0.8} />
               )}
               {line.isFullHour && (
-                <text 
-                  x={(line.x * (radius + 25)) + dx} 
-                  y={(-line.y * (radius + 25)) + dy} 
-                  textAnchor="middle" alignmentBaseline="middle" 
-                  style={{ fontSize: '14px', fontWeight: '800', fill: '#475569' }}
-                >
+                <text x={(line.x * (radius + 25)) + dx} y={(-line.y * (radius + 25)) + dy} textAnchor="middle" alignmentBaseline="middle" style={{ fontSize: '14px', fontWeight: '800', fill: '#475569' }}>
                   {line.displayHourText}
                 </text>
               )}
@@ -87,10 +84,6 @@ export default function SundialPreview({ config }) {
           );
         })}
       </svg>
-      {/* 在左下角顯示精確的物理參數供驗證 */}
-      <div style={{ position: 'absolute', bottom: '20px', left: '20px', fontSize: '11px', color: '#94a3b8' }}>
-        {isVertical && `副晷針偏角 (SD): ${substyleAngleDeg.toFixed(2)}°`}
-      </div>
     </div>
   );
 }
