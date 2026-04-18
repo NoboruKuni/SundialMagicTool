@@ -22,14 +22,15 @@ export default function SundialConfigPanel({ config, onChange }) {
   return (
     <div style={{ padding: '32px', height: '100%', overflowY: 'auto', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0' }}>
       <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', marginBottom: '4px', letterSpacing: '-1px' }}>SundialMagic</h2>
-      <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '32px', fontWeight: 'bold' }}>VERSION 1.7 PRO</p>
+      <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '32px', fontWeight: 'bold' }}>VERSION 1.8 PRO</p>
 
       {/* 地理設定 */}
       <div style={sectionStyle}>
         <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#334155', borderLeft: '4px solid #3b82f6', paddingLeft: '10px', marginBottom: '16px' }}>📍 地理與時間</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-          <div><label style={labelStyle}>緯度 (0~90)</label><input type="number" name="latitude" value={config.latitude} onChange={handleChange} min="0" max="90" step="0.01" style={inputStyle} /></div>
-          <div><label style={labelStyle}>經度 (0~360)</label><input type="number" name="longitude" value={config.longitude} onChange={handleChange} min="0" max="360" step="0.01" style={inputStyle} /></div>
+          {/* 【修正】：將 step 從 0.01 放大為 0.1 */}
+          <div><label style={labelStyle}>緯度 (0~90)</label><input type="number" name="latitude" value={config.latitude} onChange={handleChange} min="0" max="90" step="0.1" style={inputStyle} /></div>
+          <div><label style={labelStyle}>經度 (0~360)</label><input type="number" name="longitude" value={config.longitude} onChange={handleChange} min="0" max="360" step="0.1" style={inputStyle} /></div>
         </div>
         
         <div style={{ opacity: config.useSolarTime ? 0.5 : 1, transition: '0.3s' }}>

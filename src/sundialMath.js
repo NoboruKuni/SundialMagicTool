@@ -72,13 +72,11 @@ export function calculateHourLines(config) {
       pointData.x = -Math.sin(angleWall);
       pointData.y = -Math.cos(angleWall);
 
-      // 副晷針判定：若 hRad 與 DL 接近，代表影子落在副晷針線上
       const isSubstyle = Math.abs(hDiff) < 0.01;
       if (isSubstyle && gnomonThickness > 0) {
         lines.push({ ...pointData, thicknessShift: -(gnomonThickness / 2) });
         lines.push({ ...pointData, thicknessShift: (gnomonThickness / 2) });
       } else {
-        // 修正位移方向：angleSub 決定了相對於副晷針的位置
         pointData.thicknessShift = (gnomonThickness / 2) * Math.sign(-angleSub || 0);
         lines.push(pointData);
       }

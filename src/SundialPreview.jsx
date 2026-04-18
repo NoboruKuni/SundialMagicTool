@@ -36,11 +36,12 @@ export default function SundialPreview({ config }) {
       </div>
 
       <svg ref={svgRef} viewBox={`-${viewBoxSize} -${viewBoxSize} ${viewBoxSize * 2} ${viewBoxSize * 2}`} style={{ width: '100%', maxWidth: '700px', height: 'auto' }}>
-        {/* 副晷針基準 (傾斜晷針) */}
-        <g transform={`rotate(${-substyleAngleDeg})`}>
+        
+        {/* 【修正】：移除了錯誤的負號，讓 SVG 的旋轉方向與我們推演的物理方向一致 */}
+        <g transform={`rotate(${substyleAngleDeg})`}>
           {config.type !== 'analemmatic' && (
             config.gnomonThickness > 0 ? (
-              <rect x={-config.gnomonThickness/2} y={isVertical ? 0 : -radius} width={config.gnomonThickness} height={radius} fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" opacity="0.6" />
+              <rect x={-config.gnomonThickness/2} y={isVertical ? 0 : -radius} width={config.gnomonThickness} height={radius} fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
             ) : (
               <line x1="0" y1="0" x2="0" y2={radius * axisYDir} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
             )
@@ -55,19 +56,30 @@ export default function SundialPreview({ config }) {
           const pxOuter = line.x * radius, pyOuter = -line.y * radius;
           const pxInner = line.x * rInner, pyInner = -line.y * rInner;
 
-          // 使用更加穩定的位移邏輯：位移向量垂直於副晷針線
-          const sdRad = -substyleAngleDeg * (Math.PI / 180);
-          const dx = shift * Math.cos(sdRad), dy = shift * Math.sin(sdRad);
+          // 【物理位移法】：計算垂直於傾斜晷針的法向量，產生完美的平行推移
+          const sdRad = substyleAngleDeg * (Math.PI / 180);
+          const dx = shift * Math.cos(sdRad);
+          const dy = shift * Math.sin(sdRad);
 
           return (
             <g key={`${line.hour}-${idx}`}>
               {config.type === 'analemmatic' ? (
                 <circle cx={pxOuter} cy={pyOuter} r={line.isFullHour ? 4.5 : 1.5} fill="#2563eb" />
               ) : (
-                <line x1={pxInner + dx} y1={pyInner + dy} x2={pxOuter + dx} y2={pyOuter + dy} stroke={line.isFullHour ? "#1e293b" : "#cbd5e1"} strokeWidth={line.isFullHour ? 2 : 0.8} />
+                <line 
+                  x1={pxInner + dx} y1={pyInner + dy} 
+                  x2={pxOuter + dx} y2={pyOuter + dy} 
+                  stroke={line.isFullHour ? "#1e293b" : "#cbd5e1"} 
+                  strokeWidth={line.isFullHour ? 2 : 0.8} 
+                />
               )}
               {line.isFullHour && (
-                <text x={(line.x * (radius + 25)) + dx} y={(-line.y * (radius + 25)) + dy} textAnchor="middle" alignmentBaseline="middle" style={{ fontSize: '14px', fontWeight: '800', fill: '#475569' }}>
+                <text 
+                  x={(line.x * (radius + 25)) + dx} 
+                  y={(-line.y * (radius + 25)) + dy} 
+                  textAnchor="middle" alignmentBaseline="middle" 
+                  style={{ fontSize: '14px', fontWeight: '800', fill: '#475569' }}
+                >
                   {line.displayHourText}
                 </text>
               )}
@@ -75,6 +87,7 @@ export default function SundialPreview({ config }) {
           );
         })}
       </svg>
+      {/* 在左下角顯示精確的物理參數供驗證 */}
       <div style={{ position: 'absolute', bottom: '20px', left: '20px', fontSize: '11px', color: '#94a3b8' }}>
         {isVertical && `副晷針偏角 (SD): ${substyleAngleDeg.toFixed(2)}°`}
       </div>
