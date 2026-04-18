@@ -3,6 +3,15 @@ import React from 'react';
 import { getEoTTable } from './sundialMath';
 
 export default function ConstructionData({ config, data }) {
+  // 【防呆機制】：確保資料確實傳入，避免 Cannot read properties of undefined 崩潰
+  if (!data || !data.lines) {
+    return (
+      <div style={{ padding: '30px', color: '#ef4444', fontWeight: 'bold' }}>
+        ⚠️ 正在載入數據或遇到錯誤。請確保您的 App.jsx 已經正確將 data 作為 prop 傳遞給此元件。
+      </div>
+    );
+  }
+
   const { lines, gnomon } = data;
   const eotData = getEoTTable();
 
@@ -17,18 +26,24 @@ export default function ConstructionData({ config, data }) {
     <div style={{ height: '100%', overflowY: 'auto', padding: '30px', backgroundColor: '#f8fafc', boxSizing: 'border-box' }}>
       
       {/* 區塊 1：晷針安裝參數 */}
-      {config.type !== 'analemmatic' && (
+      {config.type !== 'analemmatic' && gnomon && (
         <div style={blockStyle}>
           <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>📐 晷針安裝參數 (Gnomon Parameters)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div style={{ padding: '16px', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
               <div style={{ fontSize: '12px', color: '#3b82f6', fontWeight: 'bold' }}>晷針仰角 (Style Height / SH)</div>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: '#1d4ed8' }}>{gnomon.SH_deg?.toFixed(2)}°</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#1d4ed8' }}>
+                {/* 【修正】：移除 ?. 語法，改用傳統判定確保相容性 */}
+                {gnomon.SH_deg !== null && gnomon.SH_deg !== undefined ? gnomon.SH_deg.toFixed(2) + '°' : 'N/A'}
+              </div>
               <div style={{ fontSize: '11px', color: '#60a5fa', marginTop: '4px' }}>晷針斜邊與牆面/地面的實體夾角。</div>
             </div>
             <div style={{ padding: '16px', backgroundColor: '#f5f3ff', borderRadius: '8px' }}>
               <div style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: 'bold' }}>副晷針偏角 (Substyle Distance / SD)</div>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: '#6d28d9' }}>{gnomon.SD_deg?.toFixed(2)}°</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#6d28d9' }}>
+                {/* 【修正】：移除 ?. 語法 */}
+                {gnomon.SD_deg !== null && gnomon.SD_deg !== undefined ? gnomon.SD_deg.toFixed(2) + '°' : 'N/A'}
+              </div>
               <div style={{ fontSize: '11px', color: '#a78bfa', marginTop: '4px' }}>晷針底邊偏離垂直基準線的角度。</div>
             </div>
           </div>
@@ -88,7 +103,8 @@ export default function ConstructionData({ config, data }) {
                 <td style={{...tdStyle, fontWeight: line.isFullHour ? 'bold' : 'normal'}}>
                   {line.displayHourText}{line.isHalfHour ? ':30' : ':00'}
                 </td>
-                <td style={tdStyle}>{line.angleDeg ? line.angleDeg.toFixed(2) + '°' : 'N/A'}</td>
+                {/* 【修正】：確保 0° 不會被當成 falsy 值變成 N/A */}
+                <td style={tdStyle}>{line.angleDeg !== undefined ? line.angleDeg.toFixed(2) + '°' : 'N/A'}</td>
                 <td style={tdStyle}>{line.x.toFixed(4)}</td>
                 <td style={tdStyle}>{line.y.toFixed(4)}</td>
                 <td style={tdStyle}>{line.thicknessShift ? line.thicknessShift.toFixed(2) + ' mm' : '0.00 mm'}</td>
